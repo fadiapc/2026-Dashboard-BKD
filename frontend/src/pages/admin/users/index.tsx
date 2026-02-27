@@ -13,7 +13,7 @@ import Link from "next/link";
 import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { TrashIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { TrashIcon, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -49,6 +49,12 @@ export default function Home() {
     is_admin: false,
     is_active: false,
   });
+  
+  // State Baru untuk Password & Konfirmasi
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [createUserError, setCreateUserError] = useState("");
   const [createUserSuccess, setCreateUserSuccess] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -63,8 +69,11 @@ export default function Home() {
         is_admin: false,
         is_active: false,
       });
+      setConfirmPassword(""); // Reset konfirmasi password
       setCreateUserError("");
       setCreateUserSuccess("");
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }
   };
 
@@ -81,6 +90,11 @@ export default function Home() {
 
       if (!newUser.is_active) {
         throw new Error("Active option must be selected");
+      }
+
+      // Validasi kecocokan password
+      if (newUser.password !== confirmPassword) {
+        throw new Error("Passwords do not match");
       }
 
       const response = await fetchDataAuthenticatedWithBody(
@@ -103,10 +117,9 @@ export default function Home() {
       }
       
       setCreateUserSuccess("User created successfully");
-      setCreateUserSuccess("");
       setIsDialogOpen(false); 
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setCreateUserError(error.message);
     }
@@ -187,7 +200,7 @@ export default function Home() {
                 </div>
               </DialogTrigger>
                 
-              <DialogContent className="sm:max-w-[375px]">
+              <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle className="text-[#2C3E50]">Add user</DialogTitle>
                 </DialogHeader>
@@ -199,7 +212,7 @@ export default function Home() {
                     <Input
                       id="name"
                       name="name"
-                      className="col-span-4"
+                      className="col-span-5"
                       type="text"
                       value={newUser.name}
                       onChange={(e) => {
@@ -215,7 +228,7 @@ export default function Home() {
                     <Input
                       id="initials"
                       name="initials"
-                      className="col-span-4"
+                      className="col-span-5"
                       type="text"
                       value={newUser.initials}
                       onChange={(e) => {
@@ -224,22 +237,61 @@ export default function Home() {
                       }}
                     />
                   </div>
+                  
+                  {/* Field Password dengan Mata */}
                   <div className="grid grid-cols-7 items-center gap-4">
                     <Label htmlFor="password" className="col-span-2 text-right text-[#2C3E50]">
                       Password
                     </Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      className="col-span-4"
-                      type="password"
-                      value={newUser.password}
-                      onChange={(e) => {
-                        setNewUser({ ...newUser, password: e.target.value });
-                        setCreateUserError("");
-                      }}
-                    />
+                    <div className="col-span-5 relative">
+                        <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={newUser.password}
+                        className="pr-10"
+                        onChange={(e) => {
+                            setNewUser({ ...newUser, password: e.target.value });
+                            setCreateUserError("");
+                        }}
+                        />
+                        <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
                   </div>
+
+                  {/* Field Konfirmasi Password dengan Mata */}
+                  <div className="grid grid-cols-7 items-center gap-4">
+                    <Label htmlFor="confirmPassword" className="col-span-2 text-right text-[#2C3E50]">
+                      Confirm
+                    </Label>
+                    <div className="col-span-5 relative">
+                        <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        className="pr-10"
+                        onChange={(e) => {
+                            setConfirmPassword(e.target.value);
+                            setCreateUserError("");
+                        }}
+                        />
+                        <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-7 items-center gap-4">
                     <Label htmlFor="is_admin" className="col-span-2 text-right text-[#2C3E50]">
                       Admin
@@ -247,7 +299,7 @@ export default function Home() {
                     <Input
                       id="is_admin"
                       name="is_admin"
-                      className="col-span-4"
+                      className="w-4 h-4"
                       type="checkbox"
                       checked={newUser.is_admin}
                       onChange={(e) => {
@@ -263,7 +315,7 @@ export default function Home() {
                     <Input
                       id="is_active"
                       name="is_active"
-                      className="col-span-4"
+                      className="w-4 h-4"
                       type="checkbox"
                       checked={newUser.is_active}
                       onChange={(e) => {
@@ -273,10 +325,10 @@ export default function Home() {
                     />
                   </div>
                   {createUserError && (
-                    <div className="text-red-600">{createUserError}</div>
+                    <div className="text-red-600 text-sm text-center">{createUserError}</div>
                   )}
                   {createUserSuccess && (
-                    <div className="text-green-600">User created successfully</div>
+                    <div className="text-green-600 text-sm text-center">User created successfully</div>
                   )}
                 </div>
                 <DialogFooter>
