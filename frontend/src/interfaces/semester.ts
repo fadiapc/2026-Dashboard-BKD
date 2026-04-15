@@ -1,10 +1,12 @@
 import { Course, ProcessedCoursesResult } from "./course";
 
 export interface Semester {
-    id: number;
-    date: string;
-    is_active: boolean;
-    courses?: Course[];
+  id: number;
+  name: string;
+  date: string;
+  end_date: string;
+  is_active: boolean;
+  courses?: any[];
 }
 
 export interface SemesterOfUser {

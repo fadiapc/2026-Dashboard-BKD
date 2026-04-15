@@ -40,7 +40,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 const SemesterFormSchema = z.object({
   startdate: z.date({
-    required_error: "A date is required.",
+    required_error: "Start date is required.",
+  }),
+  enddate: z.date({
+    required_error: "End date is required.",
   }),
 })
 
@@ -62,6 +65,7 @@ const CourseFormSchema = z.object({
 
 export default function Home() {
   const [processedUserData, setProcessedUserData] = useState<ProcessedCoursesResult>();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const semesterForm = useForm<z.infer<typeof SemesterFormSchema>>({
     resolver: zodResolver(SemesterFormSchema),
   })
@@ -72,23 +76,29 @@ export default function Home() {
 
   function onSubmitSemester(data: z.infer<typeof SemesterFormSchema>) {
     const date = data.startdate.toISOString().slice(0, 10);
+    const endDate = data.enddate.toISOString().slice(0, 10);
     const payload = {
       date,
+      endDate,
     };
+    
     const createSemester = async () => {
       try {
-        await fetchDataAuthenticatedWithBody(
+        const response = await fetchDataAuthenticatedWithBody(
           "http://localhost:5067/semesters",
           {
             method: "POST",
             body: JSON.stringify(payload),
           }
         );
-        setSemesters((prev) => [...prev, { id: 0, date, is_active: false}]);
-        } catch (error) {
-          console.error(error);
-          }
-          };
+        setSemesters((prev) => [...prev, response.data]);
+        semesterForm.reset(); // Reset form setelah berhasil
+      } catch (error: any) {
+        console.error(error);
+        const errorMsg = error.message || "Terjadi kesalahan saat menyimpan semester";
+        setErrorMessage(errorMsg); 
+      }
+    };
     createSemester();
   }
 
@@ -276,87 +286,60 @@ export default function Home() {
           <h4 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">Semesters</h4>
           <div className="grid grid-cols-1 gap-2">
           <Form {...semesterForm}>
-            <form onSubmit={semesterForm.handleSubmit(onSubmitSemester)} className="space-y-8">
-              <div className="flex flex-row items-end gap-2 mb-4">
-              <FormField
-                control={semesterForm.control}
-                name="startdate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="text-[#2C3E50] text-base">Semester start date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-[300px] pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                          showOutsideDays={true}
-                          captionLayout="dropdown"
-                          fromYear={2000}
-                          toYear={2035}
-                          className="p-3"
-                          classNames={{
-                            months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                            month: "space-y-4",
-                            caption: "flex justify-center pt-1 relative items-center",
-                            caption_label: "text-sm font-medium hidden",
-                            caption_dropdowns: "flex gap-2 justify-center",
-                            dropdown: "p-1 text-sm border border-input bg-background rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-ring",
-                            nav: "space-x-1 flex items-center",
-                            nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                            nav_button_previous: "absolute left-1",
-                            nav_button_next: "absolute right-1",
-                            table: "w-full border-collapse space-y-1",
-                            head_row: "flex",
-                            head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                            row: "flex w-full mt-2",
-                            cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                            day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                            day_range_end: "day-range-end",
-                            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                            day_today: "bg-accent text-accent-foreground",
-                            day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-                            day_disabled: "text-muted-foreground opacity-50",
-                            day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                            day_hidden: "invisible",
-                          }}
-                          components={{
-                            IconLeft: (props) => <ChevronLeft className="h-4 w-4" />,
-                            IconRight: (props) => <ChevronRight className="h-4 w-4" />,
-                          }}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-                <div className="ml-auto">
-                  <Button className="bg-[#4D44B5]" type="submit">+ New Semester</Button>
-                </div>
+            <form onSubmit={semesterForm.handleSubmit(onSubmitSemester)} className="space-y-4 mb-6">
+              <div className="flex flex-row items-start gap-4">
+                {/* Input Tanggal Mulai */}
+                <FormField
+                  control={semesterForm.control}
+                  name="startdate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-[#2C3E50] text-base">Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[200px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? format(field.value, "PPP") : <span>Pick start date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Input Tanggal Selesai */}
+                <FormField
+                  control={semesterForm.control}
+                  name="enddate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="text-[#2C3E50] text-base">End Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant={"outline"} className={cn("w-[200px] pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                              {field.value ? format(field.value, "PPP") : <span>Pick end date</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
+              
+              <Button className="bg-[#4D44B5] w-full mt-2" type="submit">+ New Semester</Button>
             </form>
           </Form>
             {semesters &&
@@ -372,7 +355,7 @@ export default function Home() {
                           : "bg-white-100 text-[#525F7F] hover:bg-[#EAE8FF] border"
                         } text-base my-1`}
                   >
-                    {properSemester(semester.date)}{semester.is_active ? "  ✅" : ""}
+                    {semester.name}{semester.is_active ? "  ✅" : ""}
                   </Button>
                 </React.Fragment>
               ))}
@@ -382,7 +365,7 @@ export default function Home() {
           {selectedSemester ? (
             <div className="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
               <h4 className="text-xl text-[#2C3E50] font-semibold">
-                Courses of {properSemester(selectedSemester.date)}
+                Courses of {selectedSemester.name}
               </h4>
               {!selectedSemester.is_active && (
                 <div>
@@ -634,6 +617,28 @@ export default function Home() {
           )}
         </Card>
       </div>
+
+      {/* Pop-up Peringatan Error */}
+      <AlertDialog open={!!errorMessage} onOpenChange={(open) => !open && setErrorMessage(null)}>
+        <AlertDialogContent className="bg-white border-red-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 text-xl flex items-center gap-2">
+              ⚠️ Peringatan
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-700 text-base mt-2">
+              {errorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button 
+              className="bg-[#4D44B5] text-white hover:bg-[#3a338a]" 
+              onClick={() => setErrorMessage(null)}
+            >
+              Mengerti
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
