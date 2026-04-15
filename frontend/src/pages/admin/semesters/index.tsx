@@ -282,7 +282,7 @@ export default function Home() {
       </header>
 
       <div className="grid grid-rows-2 grid-cols-3 w-full gap-5">
-        <ScrollArea className="h-[90.5vh] row-span-2 rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[90.5vh] row-span-2 rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">Semesters</h4>
           <div className="grid grid-cols-1 gap-2">
           <Form {...semesterForm}>
@@ -361,7 +361,7 @@ export default function Home() {
               ))}
           </div>
         </ScrollArea>
-        <ScrollArea className="h-[44vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[44vh] rounded-md border-0 shadow-md p-4 bg-white">
           {selectedSemester ? (
             <div className="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
               <h4 className="text-xl text-[#2C3E50] font-semibold">
@@ -457,7 +457,7 @@ export default function Home() {
                 )}
           </div>
         </ScrollArea>
-        <ScrollArea className="h-[44vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[44vh] rounded-md border-0 shadow-md p-4 bg-white">
           {selectedSemester ? (
             <div>
               <h4 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-2">
@@ -599,7 +599,7 @@ export default function Home() {
               </>
           )}
         </ScrollArea>
-        <Card className="h-[44vh] col-span-2 rounded-md border p-4 bg-white">
+        <Card className="h-[44vh] col-span-2 rounded-md border-0 shadow-md p-4 bg-white">
           {selectedSemester ? (
             <div>
               <h4 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">BKD Graph for {properSemester(selectedSemester.date)}</h4>
