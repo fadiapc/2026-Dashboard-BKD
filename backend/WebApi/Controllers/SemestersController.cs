@@ -6,36 +6,50 @@ using WebApi.Models;
 
 namespace WebApi.Controllers
 {
+    public class SemesterRequest
+    {
+        public DateTime Date { get; set; } // tanggal mulai
+        public DateTime EndDate { get; set; }
+    }
+
     [ApiController]
     [Route("/[controller]")]
     [AuthRequired]
     public class SemestersController : ControllerBase
     {
         private readonly DataContext _context;
+
         public SemestersController(DataContext context)
         {
             _context = context;
         }
 
+        // GET: /Semesters - Mengambil semua daftar semester
         [HttpGet]
-        public async Task<ActionResult<List<Semester>>> Get()
+        public async Task<ActionResult> Get()
         {
             var semesters = await _context.Semesters.ToListAsync();
 
-            if(semesters == null){
-                return NotFound(new {Message = "Not found"});
+            if (semesters == null)
+            {
+                return NotFound(new { Message = "Not found" });
             }
 
-            return Ok(new { 
-                Message = "Success", 
-                Data = semesters.Select(s => new {
+            return Ok(new
+            {
+                Message = "Success",
+                Data = semesters.Select(s => new
+                {
                     id = s.Id,
+                    name = s.Name, 
                     date = s.Date.ToString("yyyy-MM-dd"),
+                    end_date = s.EndDate.ToString("yyyy-MM-dd"),
                     is_active = s.IsActive
                 }) 
             });
         }
 
+        // GET: /Semesters/{id} - Mengambil detail satu semester beserta mata kuliahnya
         [HttpGet]
         [Route("{id}")]
         public async Task<ActionResult<Semester>> Get(int id)
@@ -45,15 +59,16 @@ namespace WebApi.Controllers
                 var semester = await _context.Semesters.FindAsync(id);
 
                 if (semester == null)
+                {
                     return NotFound(new { Message = "Semester not found", Data = id });
+                }
                 
                 var courses = await _context.Courses
                     .Where(c => c.SemesterId == id)
                     .Include(c => c.CourseTypes)
                     .ToListAsync();
 
-                var coursesResponse = new object();
-                coursesResponse = courses.Select(course => new {
+                var coursesResponse = courses.Select(course => new {
                     id = course.Id,
                     name = course.Name,
                     code = course.Code,
@@ -64,45 +79,101 @@ namespace WebApi.Controllers
                     }).ToList()
                 }).ToList();
 
-                var response = new
-                {
+                return Ok(new {
                     message = "success",
-                    data = new
-                    {
+                    data = new {
                         id = semester.Id,
+                        name = semester.Name,
                         date = semester.Date.ToString("yyyy-MM-dd"),
+                        end_date = semester.EndDate.ToString("yyyy-MM-dd"),
                         is_active = semester.IsActive,
                         courses = coursesResponse
                     }
-                };
-
-                return Ok(response);
-            }catch(Exception e){
-                return StatusCode(500, new {Message = "Internal server error", Data = e.Message});
+                });
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new { Message = "Internal server error", Data = e.Message });
             }
         }
 
+        // POST: /Semesters - Menambah semester baru dengan penamaan otomatis
         [HttpPost]
         [AdminRequired]
-        public async Task<ActionResult<List<Semester>>> Add(SemesterRequest request)
+        public async Task<ActionResult<Semester>> Add(SemesterRequest request)
         {
-            try
+            try 
             {
-                var semester = new Semester
+                // validasi durasi input
+        
+                // 1. Tanggal selesai harus setelah tanggal mulai
+                if (request.EndDate <= request.Date)
                 {
-                    Date = request.Date
+                    return BadRequest(new { message = "Gagal! Tanggal selesai harus setelah tanggal mulai." });
+                }
+                
+                var duration = request.EndDate - request.Date;
+
+                 // 2. Cek durasi minimal
+                if (duration.TotalDays < 150) 
+                {
+                    return BadRequest(new { 
+                        message = $"Gagal! Durasi semester terlalu pendek ({Math.Round(duration.TotalDays / 30, 1)} bulan). Minimal durasi adalah 5 bulan." 
+                    });
+                }
+
+                // 3. Cek durasi maksimal
+                if (duration.TotalDays > 210) 
+                {
+                    return BadRequest(new { 
+                        message = $"Gagal! Durasi semester terlalu lama ({Math.Round(duration.TotalDays / 30, 1)} bulan). Maksimal durasi adalah 7 bulan." 
+                    });
+                }
+
+                // 4. Penamaan otomatis
+                int year = request.Date.Year;
+                int month = request.Date.Month;
+                string generatedName = "";
+
+                if (month >= 8) 
+                {
+                    generatedName = $"{year}/{year + 1} Semester Ganjil";
+                }
+                else // januari-juli genap
+                {
+                    generatedName = $"{year - 1}/{year} Semester Genap";
+                }
+
+                // 5. Cek duplikat
+                var existingSemester = await _context.Semesters
+                    .FirstOrDefaultAsync(s => s.Name == generatedName);
+
+                if (existingSemester != null)
+                {
+                    // Jika sudah ada, langsung stop dan kasih tahu user
+                    return BadRequest(new { message = $"Gagal! Semester {generatedName} sudah ada di database." });
+                }
+
+                var newSemester = new Semester
+                {
+                    Name = generatedName, // Hasil otomatis: "2026/2027 Semester Ganjil"
+                    Date = request.Date,
+                    EndDate = request.EndDate,
+                    IsActive = false
                 };
 
-                await _context.Semesters.AddAsync(semester);
+                _context.Semesters.Add(newSemester);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { Message = "Success", Data = semester });
-            }catch(Exception e){
-                return StatusCode(500, new {Message = "Internal server error", Data = e.Message});
+                return Ok(new { message = "Success", data = newSemester });
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new { Message = "Internal server error", Data = e.Message });
             }
         }
 
-
+        // PUT: /Semesters/{id}/activate - Mengaktifkan satu semester & menonaktifkan yang lain
         [HttpPut]
         [AdminRequired]
         [Route("{id}/activate")]
@@ -113,26 +184,35 @@ namespace WebApi.Controllers
                 var semester = await _context.Semesters.FindAsync(id);
 
                 if (semester == null)
+                {
                     return NotFound(new { Message = "Semester not found", Data = id });
+                }
+
+                // Cari semester lain yang sedang aktif, lalu matikan
                 var activeSemester = await _context.Semesters.FirstOrDefaultAsync(s => s.IsActive == true);
                 if (activeSemester != null)
+                {
                     activeSemester.IsActive = false;
+                }
+
                 semester.IsActive = true;
-                
                 await _context.SaveChangesAsync();
 
                 return Ok(new { Message = "Success", Data = semester });
-            }catch(Exception e){
-                return StatusCode(500, new {Message = "Internal server error", Data = e.Message});
+            }
+            catch (Exception e)
+            {
+                return StatusCode(500, new { Message = "Internal server error", Data = e.Message });
             }
         }
-        
 
+        // DELETE: /Semesters/{id} - Menghapus semester beserta seluruh data terkait (Cascade)
         [HttpDelete]
         [Route("{id}")]
         [AdminRequired]
         public async Task<IActionResult> Delete(int id)
         {
+            // Gunakan Transaction agar jika satu gagal, semua batal (aman)
             using (var transaction = await _context.Database.BeginTransactionAsync())
             {
                 try
@@ -148,19 +228,16 @@ namespace WebApi.Controllers
                         return BadRequest(new { message = "Cannot delete an active semester" });
                     }
 
-                    // Retrieve and delete related Courses
+                    // Hapus data Courses, CourseTypes, Classes, dan Schedules terkait
                     var courses = await _context.Courses.Where(c => c.SemesterId == id).ToListAsync();
                     foreach (var course in courses)
                     {
-                        // Retrieve and delete related CourseTypes
                         var courseTypes = await _context.CourseTypes.Where(ct => ct.CourseId == course.Id).ToListAsync();
                         foreach (var courseType in courseTypes)
                         {
-                            // Retrieve and delete related CourseClasses
                             var courseClasses = await _context.CourseClasses.Where(cc => cc.CourseTypeId == courseType.Id).ToListAsync();
                             _context.CourseClasses.RemoveRange(courseClasses);
 
-                            // Retrieve and delete related Schedules
                             var schedules = await _context.Schedules.Where(s => s.CourseClassId == courseType.Id).ToListAsync();
                             _context.Schedules.RemoveRange(schedules);
                         }
@@ -168,10 +245,9 @@ namespace WebApi.Controllers
                     }
                     _context.Courses.RemoveRange(courses);
 
-                    // Finally, delete the Semester
+                    // Terakhir, hapus data Semesternya
                     _context.Semesters.Remove(semester);
 
-                    // Save changes and commit the transaction
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -180,15 +256,9 @@ namespace WebApi.Controllers
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-                    return StatusCode(500, new { message = "An error occurred while deleting the semester", error = ex.Message });
+                    return StatusCode(500, new { message = "Delete failed", error = ex.Message });
                 }
             }
         }
-
-    }
-
-     public class SemesterRequest
-    {
-        public DateTime Date { get; set; }
     }
 }

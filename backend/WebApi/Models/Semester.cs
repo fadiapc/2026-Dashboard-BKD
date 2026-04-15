@@ -9,14 +9,20 @@ namespace WebApi.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime Date { get; set; }
 
         [Required]
+        [DataType(DataType.Date)]
+        public DateTime EndDate { get; set; }
+
+        [Required]
         public bool IsActive { get; set; } = false;
 
         public List<Course> Courses { get; set; } = new List<Course>();
-
     }
 }

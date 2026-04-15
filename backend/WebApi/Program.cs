@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models; // <-- Kembali pakai .Models
 using WebApi.Config;
 using WebApi.Data;
 using WebApi.Models;
@@ -48,7 +49,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(
         name: "allowall",
         policy  => {
-            policy.AllowAnyOrigin(); // TODO: Change this to a specific origin
+            policy.AllowAnyOrigin(); 
             policy.WithHeaders("Content-Type", "Authorization");
             policy.AllowAnyMethod();
         });
@@ -57,6 +58,38 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// --- SWAGGER VERSI STABIL ---
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Dashboard BKD API", Version = "v1" });
+    
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Masukkan token JWT dengan format: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+// ----------------------------
+
 builder.Services.AddDbContext<DataContext>(options => options.UseSqlServer(Secret.ConnectionString));
 
 var app = builder.Build();
@@ -68,10 +101,8 @@ async Task InitializeDatabaseAsync(IServiceProvider serviceProvider)
     using var scope = serviceProvider.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<DataContext>();
     var adminExists = await context.Users.AnyAsync(u => u.IsAdmin && u.IsActive);
-    var usersCount = await context.Users.CountAsync();
     if (!adminExists)
     {
-
         var user = new User
         {
             Name = Secret.AdminName,
@@ -81,13 +112,18 @@ async Task InitializeDatabaseAsync(IServiceProvider serviceProvider)
             Email = "",
             IsActive = true
         };
-
         context.Users.Add(user);
         await context.SaveChangesAsync();
     }
 }
 
 await InitializeDatabaseAsync(app.Services);
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
