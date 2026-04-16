@@ -18,6 +18,7 @@ namespace WebApi.Controllers
             _context = context;
         }
 
+        // --- 1. POST: Buat Mata Kuliah Baru ---
         [HttpPost]
         [AdminRequired]
         public async Task<ActionResult<Course>> CreateCourse([FromBody] CourseRequestModel request)
@@ -28,47 +29,60 @@ namespace WebApi.Controllers
                 {
                     return BadRequest(ModelState);
                 }
-                if (_context.Courses.Any(c => c.Code == request.code) && _context.Courses.Any(c => c.SemesterId == request.semester_id))
+
+                // Cari Semester yang sedang aktif
+                var activeSemester = await _context.Semesters.FirstOrDefaultAsync(s => s.IsActive);
+                if (activeSemester == null)
                 {
-                    return Conflict(new { Message = "Course with the same code already exists in the semester", Data = request.code });
+                    return BadRequest(new { Message = "Gagal! Tidak ada semester yang sedang aktif. Silakan aktifkan semester terlebih dahulu di menu Semester." });
                 }
 
-                var semester = await _context.Semesters.FindAsync(request.semester_id);
-                if (semester == null)
+                // Cek duplikat HANYA di semester yang aktif ini
+                var isDuplicate = await _context.Courses.AnyAsync(c => 
+                    c.Code == request.code && c.SemesterId == activeSemester.Id);
+                
+                if (isDuplicate)
                 {
-                    return NotFound(new { Message = "Semester not found", Data = request.semester_id });
+                    return Conflict(new { Message = $"Mata kuliah dengan kode {request.code} sudah ada di {activeSemester.Name}", Data = request.code });
                 }
 
                 var newCourse = new Course
                 {
-                    SemesterId = request.semester_id,
+                    SemesterId = activeSemester.Id,
                     Name = request.name,
                     Code = request.code,
                     Semesters = (Course.SemesterEnum)request.semesters,
                     CourseTypes = new List<CourseType>(),
-                    Semester = semester
+                    Semester = activeSemester
                 };
 
+                // Filter SKS 0
                 foreach (var ct in request.course_type)
                 {
+                    if (ct.credit <= 0)
+                    {
+                        continue; 
+                    }
+
                     var newCourseType = new CourseType
                     {
                         CourseTypeT = (CourseType.CourseTypeEnum)ct.type,
                         Credit = ct.credit,
                         Course = newCourse
                     };
-
                     newCourse.CourseTypes.Add(newCourseType);
                 }
 
+                // --- PEMBUATAN KELAS & JADWAL ---
                 for (int i = 0; i < newCourse.CourseTypes.Count; i++)
                 {
-                    var ct = request.course_type[i];
+                    var ctRequest = request.course_type.FirstOrDefault(req => req.type == (int)newCourse.CourseTypes.ElementAt(i).CourseTypeT);
                     var newCourseType = newCourse.CourseTypes.ElementAt(i);
-
                     newCourseType.CourseClasses = new List<CourseClass>();
 
-                    for (int j = 1; j <= ct.class_count; j++)
+                    int classCount = ctRequest != null ? ctRequest.class_count : 0;
+
+                    for (int j = 1; j <= classCount; j++)
                     {
                         var newCourseClass = new CourseClass
                         {
@@ -85,7 +99,6 @@ namespace WebApi.Controllers
                             };
                             newCourseClass.Schedules.Add(newSchedule);
                         }
-
                         newCourseType.CourseClasses.Add(newCourseClass);
                     }
                 }
@@ -93,43 +106,71 @@ namespace WebApi.Controllers
                 await _context.Courses.AddAsync(newCourse);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetCourse), new { id = newCourse.Id }, new { Message = "success", Data = MapToResponseModel(newCourse, semester.Date) });
+                return CreatedAtAction(nameof(GetCourse), new { id = newCourse.Id }, new { Message = "success", Data = MapToResponseModel(newCourse, activeSemester.Date, activeSemester.Name) });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-
                 return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
             }
         }
 
+        // --- 2. GET: Ambil Semua Mata Kuliah (Semester Aktif) ---
         [HttpGet]
-        public async Task<ActionResult<Course>> GetCourse()
+        public async Task<ActionResult> GetCourse()
         {
             try
             {
-                // get courses that its semester object is active
                 var courses = await _context.Courses
+                    .Include(c => c.Semester) 
                     .Where(c => c.Semester.IsActive)
                     .ToListAsync();
 
-                if (courses == null)
+                if (courses == null || !courses.Any())
                 {
                     return NotFound(new { Message = "Courses not found" });
                 }
 
-                return Ok(new { Message = "success", Data = courses });
+                var responseData = courses.Select(c => new {
+                    id = c.Id,
+                    name = c.Name,
+                    code = c.Code,
+                    semester_name = c.Semester.Name // Mengirimkan nama semester ke Frontend
+                });
+
+                return Ok(new { Message = "success", Data = responseData });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-
                 return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
             }
         }
 
+        // --- 3. GET: Katalog Mata Kuliah (FITUR DROPDOWN) ---
+        [HttpGet("catalog")]
+        public async Task<ActionResult> GetCourseCatalog()
+        {
+            try
+            {
+                var catalog = await _context.Courses
+                    .Select(c => new { code = c.Code, name = c.Name })
+                    .Distinct()
+                    .OrderBy(c => c.name) 
+                    .ToListAsync();
+
+                return Ok(new { Message = "success", Data = catalog });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception: {ex.Message}");
+                return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
+            }
+        }
+
+        // --- 4. GET: Detail Satu Mata Kuliah ---
         [HttpGet("{id}")]
-        public async Task<ActionResult<Course>> GetCourse(int id)
+        public async Task<ActionResult> GetCourse(int id)
         {
             try
             {
@@ -142,79 +183,26 @@ namespace WebApi.Controllers
                 {
                     return NotFound(new { Message = "Course not found", Data = id });
                 }
+
                 var semester = await _context.Semesters.FindAsync(course.SemesterId);
                 if (semester == null)
                 {
                     return NotFound(new { Message = "Semester not found", Data = course.SemesterId });
                 }
 
-                return Ok(new { Message = "success", Data = MapToResponseModel(course, semester.Date) });
+                return Ok(new { Message = "success", Data = MapToResponseModel(course, semester.Date, semester.Name) });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-
                 return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
             }
         }
 
-        [HttpDelete]
-        [Route("{id}")]
+        // --- 5. DELETE: Hapus Mata Kuliah ---
+        [HttpDelete("{id}")]
         [AdminRequired]
-        /* public async Task<IActionResult> Delete(int id)
-        {
-            using (var transaction = await _context.Database.BeginTransactionAsync())
-            {
-                try
-                {
-                    var semester = await _context.Semesters.FindAsync(id);
-                    if (semester == null)
-                    {
-                        return NotFound(new { message = "Semester not found" });
-                    }
-
-                    if (semester.IsActive)
-                    {
-                        return BadRequest(new { message = "Cannot delete an active semester" });
-                    }
-
-                    // Retrieve and delete related Courses
-                    var courses = await _context.Courses.Where(c => c.SemesterId == id).ToListAsync();
-                    foreach (var course in courses)
-                    {
-                        // Retrieve and delete related CourseTypes
-                        var courseTypes = await _context.CourseTypes.Where(ct => ct.CourseId == course.Id).ToListAsync();
-                        foreach (var courseType in courseTypes)
-                        {
-                            // Retrieve and delete related CourseClasses
-                            var courseClasses = await _context.CourseClasses.Where(cc => cc.CourseTypeId == courseType.Id).ToListAsync();
-                            _context.CourseClasses.RemoveRange(courseClasses);
-
-                            // Retrieve and delete related Schedules
-                            var schedules = await _context.Schedules.Where(s => s.CourseClassId == courseType.Id).ToListAsync();
-                            _context.Schedules.RemoveRange(schedules);
-                        }
-                        _context.CourseTypes.RemoveRange(courseTypes);
-                    }
-                    _context.Courses.RemoveRange(courses);
-
-                    // Finally, delete the Semester
-                    _context.Semesters.Remove(semester);
-
-                    // Save changes and commit the transaction
-                    await _context.SaveChangesAsync();
-                    await transaction.CommitAsync();
-
-                    return Ok(new { message = "Semester and related data deleted successfully" });
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    return StatusCode(500, new { message = "An error occurred while deleting the semester", error = ex.Message });
-                }
-            }
-        } */
-        public async Task<ActionResult<Course>> DeleteCourse(int id)
+        public async Task<ActionResult> DeleteCourse(int id)
         {
             try
             {
@@ -259,13 +247,13 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-
                 return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
             }
         }
 
+        // --- 6. GET: Detail Kelas Mata Kuliah ---
         [HttpGet("class/{id}")]
-        public async Task<ActionResult<CourseClass>> GetCourseClass(int id)
+        public async Task<ActionResult> GetCourseClass(int id)
         {
             try
             {
@@ -286,7 +274,6 @@ namespace WebApi.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-
                 return StatusCode(500, new { Message = "Internal Server Error", Data = ex.Message });
             }
         }
@@ -312,13 +299,14 @@ namespace WebApi.Controllers
             };
         }
 
-        private object MapToResponseModel(Course course, DateTime semesterStart)
+        private object MapToResponseModel(Course course, DateTime semesterStart, string semesterName)
         {
             return new
             {
                 id = course.Id,
                 name = course.Name,
                 code = course.Code,
+                semester_name = semesterName,
                 semesters = course.Semesters,
                 semester_start = semesterStart,
                 course_type = course.CourseTypes.Select(ct => new
@@ -338,7 +326,6 @@ namespace WebApi.Controllers
 
     public class CourseRequestModel
     {
-        public required int semester_id { get; set; }
         public required string name { get; set; }
         public required string code { get; set; }
         public required int semesters { get; set; }
