@@ -36,6 +36,10 @@ import {
 import { Card } from "@/components/ui/card";
 import BarChartComponent from "@/components/barchart";
 import { ProcessedCoursesResult } from "@/interfaces/course";
+
+
+import { CourseSelect } from "@/components/CourseSelect"; 
+
 const inter = Inter({ subsets: ["latin"] });
 
 const SemesterFormSchema = z.object({
@@ -66,13 +70,39 @@ const CourseFormSchema = z.object({
 export default function Home() {
   const [processedUserData, setProcessedUserData] = useState<ProcessedCoursesResult>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // === STATE UNTUK DROPDOWN ===
+  const [selectedCourseDropdown, setSelectedCourseDropdown] = useState<any>(null);
+
   const semesterForm = useForm<z.infer<typeof SemesterFormSchema>>({
     resolver: zodResolver(SemesterFormSchema),
   })
 
   const courseForm = useForm<z.infer<typeof CourseFormSchema>>({
     resolver: zodResolver(CourseFormSchema),
+    defaultValues: {
+        code: "",
+        name: "",
+        kuliah_credit: "",
+        praktikum_credit: "",
+        responsi_credit: "",
+        kuliah_class_count: "",
+        praktikum_class_count: "",
+        responsi_class_count: "",
+        semesters: ""
+    }
   })
+
+  // === FITUR: DISABLE FORM KELAS OTOMATIS ===
+  const watchKuliahCredit = courseForm.watch("kuliah_credit");
+  const watchPraktikumCredit = courseForm.watch("praktikum_credit");
+  const watchResponsiCredit = courseForm.watch("responsi_credit");
+
+  useEffect(() => {
+    if (!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0) courseForm.setValue("kuliah_class_count", "0");
+    if (!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0) courseForm.setValue("praktikum_class_count", "0");
+    if (!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0) courseForm.setValue("responsi_class_count", "0");
+  }, [watchKuliahCredit, watchPraktikumCredit, watchResponsiCredit, courseForm]);
 
   function onSubmitSemester(data: z.infer<typeof SemesterFormSchema>) {
     const date = data.startdate.toISOString().slice(0, 10);
@@ -92,7 +122,7 @@ export default function Home() {
           }
         );
         setSemesters((prev) => [...prev, response.data]);
-        semesterForm.reset(); // Reset form setelah berhasil
+        semesterForm.reset(); 
       } catch (error: any) {
         console.error(error);
         const errorMsg = error.message || "Terjadi kesalahan saat menyimpan semester";
@@ -103,36 +133,43 @@ export default function Home() {
   }
 
   function onSubmitCourse(data: z.infer<typeof CourseFormSchema>) {
+    if (!data.code || !data.name) {
+       setErrorMessage("Silakan pilih atau ketik Mata Kuliah dari dropdown terlebih dahulu.");
+       return;
+    }
+
     const course_types = [
       {
           type: 0,
-          credit: data.kuliah_credit,
-          class_count: data.kuliah_class_count
+          credit: data.kuliah_credit ? parseInt(data.kuliah_credit) : 0,
+          class_count: data.kuliah_class_count ? parseInt(data.kuliah_class_count) : 0
       },
       {
           type: 1,
-          credit: data.praktikum_credit,
-          class_count: data.praktikum_class_count
+          credit: data.praktikum_credit ? parseInt(data.praktikum_credit) : 0,
+          class_count: data.praktikum_class_count ? parseInt(data.praktikum_class_count) : 0
       },
       {
           type: 2,
-          credit: data.responsi_credit,
-          class_count: data.responsi_class_count
+          credit: data.responsi_credit ? parseInt(data.responsi_credit) : 0,
+          class_count: data.responsi_class_count ? parseInt(data.responsi_class_count) : 0
       }
   ];
   const filtered_course_types = course_types.filter(course =>
-    (course.credit && parseInt(course.credit) > 0) && (course.class_count && parseInt(course.class_count) > 0)
+    course.credit > 0 && course.class_count > 0
   );
+
     const payload = {
       semester_id: selectedSemester?.id,
       code: data.code,
       name: data.name,
       course_type: filtered_course_types,
-      semesters: data.semesters,
+      semesters: data.semesters ? parseInt(data.semesters) : 0,
     };
+
     const createCourse = async () => {
       try {
-        const response = await fetchDataAuthenticatedWithBody( //ubah
+        const response = await fetchDataAuthenticatedWithBody( 
           "http://localhost:5067/courses",
           {
             method: "POST",
@@ -140,7 +177,6 @@ export default function Home() {
           }
         );
 
-      // Perbarui state `selectedSemester` dengan course baru
       const newCourse = await response.data;
       setSelectedSemester((prev) =>
         prev
@@ -151,22 +187,15 @@ export default function Home() {
           : null
       );
 
-        // Reset form setelah berhasil menambahkan course
-        courseForm.reset({
-          code: "",
-          name: "",
-          kuliah_credit: "",
-          praktikum_credit: "",
-          responsi_credit: "",
-          kuliah_class_count: "",
-          praktikum_class_count: "",
-          responsi_class_count: "",
-          semesters: ""
-        });
+        // Reset form setelah berhasil
+        courseForm.reset();
+        setSelectedCourseDropdown(null);
 
-        console.log("Course created");
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
+        // === FITUR: ALERT ANTI-DUPLIKAT ===
+        const errorMsg = error.message || "Terjadi kesalahan saat menyimpan mata kuliah.";
+        setErrorMessage(errorMsg);
       }
     };
     createCourse();
@@ -425,9 +454,9 @@ export default function Home() {
                       <div className="text-base text-right text-[#2C3E50]">
                         <div className="font-medium">{course.code}</div>
                           <div className="text-sm text-muted-foreground text-[#525F7F]"> SKS({
-                            course.course_type.find(ct => ct.type === 0)?.credit || 0 }/{
-                            course.course_type.find(ct => ct.type === 1)?.credit || 0 }/{
-                            course.course_type.find(ct => ct.type === 2)?.credit || 0 })
+                            course.course_type?.find(ct => ct.type === 0)?.credit || 0 }/{
+                            course.course_type?.find(ct => ct.type === 1)?.credit || 0 }/{
+                            course.course_type?.find(ct => ct.type === 2)?.credit || 0 })
                           </div>
                       </div>
                     </div>
@@ -465,7 +494,30 @@ export default function Home() {
               </h4>
               <div className="grid grid-cols-1 gap-2 p-2">
                 <Form {...courseForm}>
-                  <form onSubmit={courseForm.handleSubmit(onSubmitCourse)} className="w-2/3 space-y-6">
+                  <form onSubmit={courseForm.handleSubmit(onSubmitCourse)} className="w-full md:w-5/6 space-y-6">
+                    
+                    {/* === FITUR: MENU DROPDOWN COURSE === */}
+                    <div className="space-y-2">
+                      <FormLabel className="text-base font-bold text-[#263C92]">Pilih / Tambah Mata Kuliah</FormLabel>
+                      <CourseSelect 
+                         value={selectedCourseDropdown}
+                         onChange={(data) => {
+                            setSelectedCourseDropdown(data);
+                            if (data) {
+                               courseForm.setValue("name", data.originalName || data.label);
+                               if (!data.isNew) {
+                                   courseForm.setValue("code", data.value);
+                               } else {
+                                   courseForm.setValue("code", ""); // Kosongkan agar bisa diketik
+                               }
+                            } else {
+                               courseForm.setValue("name", "");
+                               courseForm.setValue("code", "");
+                            }
+                         }}
+                      />
+                    </div>
+
                     <FormField
                       control={courseForm.control}
                       name="code"
@@ -473,7 +525,11 @@ export default function Home() {
                         <FormItem>
                           <FormLabel className="text-base">Code</FormLabel>
                           <FormControl>
-                            <Input placeholder="Isi kode mata kuliah" {...field}  />
+                            <Input 
+                               placeholder="Contoh: KOM101" 
+                               {...field} 
+                               disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew} 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -486,104 +542,136 @@ export default function Home() {
                         <FormItem>
                           <FormLabel className="text-base text-[#2C3E50]">Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Isi nama mata kuliah" {...field} />
+                            <Input 
+                               placeholder="Nama mata kuliah" 
+                               {...field} 
+                               disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={courseForm.control}
-                      name="kuliah_credit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Kuliah Credit</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={courseForm.control}
-                      name="praktikum_credit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Praktikum Credit</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={courseForm.control}
-                      name="responsi_credit"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Responsi Credit</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={courseForm.control}
-                      name="kuliah_class_count"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Kuliah Class Count</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={courseForm.control}
-                      name="praktikum_class_count"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Praktikum Class Count</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={courseForm.control}
-                      name="responsi_class_count"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Responsi Class Count</FormLabel>
-                          <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={courseForm.control}
+                        name="kuliah_credit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">SKS Kuliah</FormLabel>
+                            <FormControl>
+                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={courseForm.control}
+                        name="praktikum_credit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">SKS Praktikum</FormLabel>
+                            <FormControl>
+                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={courseForm.control}
+                        name="responsi_credit"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">SKS Responsi</FormLabel>
+                            <FormControl>
+                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={courseForm.control}
+                        name="kuliah_class_count"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Kuliah</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="0" 
+                                {...field} 
+                                type="number" 
+                                min="0" 
+                                disabled={!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0}
+                                className={(!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0) ? "bg-gray-100" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={courseForm.control}
+                        name="praktikum_class_count"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Praktikum</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="0" 
+                                {...field} 
+                                type="number" 
+                                min="0" 
+                                disabled={!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0}
+                                className={(!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0) ? "bg-gray-100" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={courseForm.control}
+                        name="responsi_class_count"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Responsi</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="0" 
+                                {...field} 
+                                type="number" 
+                                min="0" 
+                                disabled={!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0}
+                                className={(!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0) ? "bg-gray-100" : ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
                     <FormField
                       control={courseForm.control}
                       name="semesters"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Semesters</FormLabel>
+                          <FormLabel className="text-base text-[#2C3E50]">Semesters (Tingkat)</FormLabel>
                           <FormControl>
-                            <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
+                            <Input placeholder="Contoh: 1, 3, 5" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="text-base bg-[#4D44B5]">Submit</Button>
+                    <Button type="submit" className="text-base bg-[#4D44B5] w-full">Save Course</Button>
                   </form>
                 </Form>
               </div>
