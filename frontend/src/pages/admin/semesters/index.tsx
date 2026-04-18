@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Inter } from "next/font/google";
 import React, { useEffect, useState } from "react";
 import { removeToken, useCheckToken } from "@/utils/cookie";
 import {
@@ -12,11 +11,10 @@ import { fetchDataAuthenticated, fetchDataAuthenticatedWithBody } from "@/utils/
 import { useRouter } from "next/navigation";
 import { properSemester } from "@/utils/semester";
 import { Semester} from "@/interfaces/semester";
-import Link from "next/link";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, TrashIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, TrashIcon } from "lucide-react";
 import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,28 +34,19 @@ import {
 import { Card } from "@/components/ui/card";
 import BarChartComponent from "@/components/barchart";
 import { ProcessedCoursesResult } from "@/interfaces/course";
-
-
 import { CourseSelect } from "@/components/CourseSelect"; 
 
-const inter = Inter({ subsets: ["latin"] });
+// === IMPORT KOMPONEN BARU
+import { AppLayout } from "@/components/AppLayout";
 
 const SemesterFormSchema = z.object({
-  startdate: z.date({
-    required_error: "Start date is required.",
-  }),
-  enddate: z.date({
-    required_error: "End date is required.",
-  }),
+  startdate: z.date({ required_error: "Start date is required." }),
+  enddate: z.date({ required_error: "End date is required." }),
 })
 
 const CourseFormSchema = z.object({
-  code: z.string().max(7, {
-    message: "Code must be at most 7 characters.",
-  }),
-  name: z.string().max(50, {
-    message: "Name must be at most 50 characters.",
-  }),
+  code: z.string().max(7, { message: "Code must be at most 7 characters." }),
+  name: z.string().max(50, { message: "Name must be at most 50 characters." }),
   kuliah_credit: z.string(),
   praktikum_credit: z.string(),
   responsi_credit: z.string(),
@@ -70,8 +59,6 @@ const CourseFormSchema = z.object({
 export default function Home() {
   const [processedUserData, setProcessedUserData] = useState<ProcessedCoursesResult>();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
-  // === STATE UNTUK DROPDOWN ===
   const [selectedCourseDropdown, setSelectedCourseDropdown] = useState<any>(null);
 
   const semesterForm = useForm<z.infer<typeof SemesterFormSchema>>({
@@ -81,19 +68,12 @@ export default function Home() {
   const courseForm = useForm<z.infer<typeof CourseFormSchema>>({
     resolver: zodResolver(CourseFormSchema),
     defaultValues: {
-        code: "",
-        name: "",
-        kuliah_credit: "",
-        praktikum_credit: "",
-        responsi_credit: "",
-        kuliah_class_count: "",
-        praktikum_class_count: "",
-        responsi_class_count: "",
-        semesters: ""
+        code: "", name: "", kuliah_credit: "", praktikum_credit: "",
+        responsi_credit: "", kuliah_class_count: "", praktikum_class_count: "",
+        responsi_class_count: "", semesters: ""
     }
   })
 
-  // === FITUR: DISABLE FORM KELAS OTOMATIS ===
   const watchKuliahCredit = courseForm.watch("kuliah_credit");
   const watchPraktikumCredit = courseForm.watch("praktikum_credit");
   const watchResponsiCredit = courseForm.watch("responsi_credit");
@@ -105,28 +85,19 @@ export default function Home() {
   }, [watchKuliahCredit, watchPraktikumCredit, watchResponsiCredit, courseForm]);
 
   function onSubmitSemester(data: z.infer<typeof SemesterFormSchema>) {
-    const date = data.startdate.toISOString().slice(0, 10);
-    const endDate = data.enddate.toISOString().slice(0, 10);
     const payload = {
-      date,
-      endDate,
+      date: data.startdate.toISOString().slice(0, 10),
+      endDate: data.enddate.toISOString().slice(0, 10),
     };
-    
     const createSemester = async () => {
       try {
-        const response = await fetchDataAuthenticatedWithBody(
-          "http://localhost:5067/semesters",
-          {
-            method: "POST",
-            body: JSON.stringify(payload),
-          }
-        );
+        const response = await fetchDataAuthenticatedWithBody("http://localhost:5067/semesters", {
+          method: "POST", body: JSON.stringify(payload),
+        });
         setSemesters((prev) => [...prev, response.data]);
         semesterForm.reset(); 
       } catch (error: any) {
-        console.error(error);
-        const errorMsg = error.message || "Terjadi kesalahan saat menyimpan semester";
-        setErrorMessage(errorMsg); 
+        setErrorMessage(error.message || "Terjadi kesalahan saat menyimpan semester"); 
       }
     };
     createSemester();
@@ -139,25 +110,11 @@ export default function Home() {
     }
 
     const course_types = [
-      {
-          type: 0,
-          credit: data.kuliah_credit ? parseInt(data.kuliah_credit) : 0,
-          class_count: data.kuliah_class_count ? parseInt(data.kuliah_class_count) : 0
-      },
-      {
-          type: 1,
-          credit: data.praktikum_credit ? parseInt(data.praktikum_credit) : 0,
-          class_count: data.praktikum_class_count ? parseInt(data.praktikum_class_count) : 0
-      },
-      {
-          type: 2,
-          credit: data.responsi_credit ? parseInt(data.responsi_credit) : 0,
-          class_count: data.responsi_class_count ? parseInt(data.responsi_class_count) : 0
-      }
-  ];
-  const filtered_course_types = course_types.filter(course =>
-    course.credit > 0 && course.class_count > 0
-  );
+      { type: 0, credit: data.kuliah_credit ? parseInt(data.kuliah_credit) : 0, class_count: data.kuliah_class_count ? parseInt(data.kuliah_class_count) : 0 },
+      { type: 1, credit: data.praktikum_credit ? parseInt(data.praktikum_credit) : 0, class_count: data.praktikum_class_count ? parseInt(data.praktikum_class_count) : 0 },
+      { type: 2, credit: data.responsi_credit ? parseInt(data.responsi_credit) : 0, class_count: data.responsi_class_count ? parseInt(data.responsi_class_count) : 0 }
+    ];
+    const filtered_course_types = course_types.filter(course => course.credit > 0 && course.class_count > 0);
 
     const payload = {
       semester_id: selectedSemester?.id,
@@ -169,42 +126,22 @@ export default function Home() {
 
     const createCourse = async () => {
       try {
-        const response = await fetchDataAuthenticatedWithBody( 
-          "http://localhost:5067/courses",
-          {
-            method: "POST",
-            body: JSON.stringify(payload),
-          }
-        );
-
-      const newCourse = await response.data;
-      setSelectedSemester((prev) =>
-        prev
-          ? {
-              ...prev,
-              courses: [...(prev.courses || []), newCourse],
-            }
-          : null
-      );
-
-        // Reset form setelah berhasil
+        const response = await fetchDataAuthenticatedWithBody("http://localhost:5067/courses", {
+          method: "POST", body: JSON.stringify(payload),
+        });
+        const newCourse = await response.data;
+        setSelectedSemester((prev) => prev ? { ...prev, courses: [...(prev.courses || []), newCourse] } : null);
         courseForm.reset();
         setSelectedCourseDropdown(null);
-
       } catch (error: any) {
-        console.error(error);
-        // === FITUR: ALERT ANTI-DUPLIKAT ===
-        const errorMsg = error.message || "Terjadi kesalahan saat menyimpan mata kuliah.";
-        setErrorMessage(errorMsg);
+        setErrorMessage(error.message || "Terjadi kesalahan saat menyimpan mata kuliah.");
       }
     };
     createCourse();
   }
 
-
   useCheckToken();
   const router = useRouter();
-  
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
   const [selectedSemesterBKD, setSelectedSemesterBKD] = useState([]);
@@ -216,100 +153,53 @@ export default function Home() {
   
   const setActive = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(
-        `http://localhost:5067/semesters/${id}/activate`,
-        { method: "PUT" }
-      );
-      setSemesters((prev) =>
-        prev.map((semester) => ({
-          ...semester,
-          is_active: semester.id === id,
-        }))
-      );
+      await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}/activate`, { method: "PUT" });
+      setSemesters((prev) => prev.map((semester) => ({ ...semester, is_active: semester.id === id })));
       setSelectedSemester((prev) => prev && { ...prev, is_active: true });
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }
 
   const deleteSemester = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(
-        `http://localhost:5067/semesters/${id}`,
-        { method: "DELETE" }
-      );
+      await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}`, { method: "DELETE" });
       setSemesters((prev) => prev.filter((semester) => semester.id !== id));
       setSelectedSemester(null);
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   }
 
   const deleteCourse = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(
-        `http://localhost:5067/courses/${id}`,
-        { method: "DELETE" }
-      );
-      setSelectedSemester((prev) => prev && {
-        ...prev,
-        courses: prev.courses.filter((course) => course.id !== id),
-      });
-    } catch (error) {
-      console.error(error);
-    }
+      await fetchDataAuthenticated(`http://localhost:5067/courses/${id}`, { method: "DELETE" });
+      setSelectedSemester((prev) => prev && { ...prev, courses: prev.courses.filter((course) => course.id !== id) });
+    } catch (error) { console.error(error); }
   }
 
   const fetchSemesters = async (id: number) => {
     try {
-      const response = await fetchDataAuthenticated(
-        `http://localhost:5067/semesters/${id}`,
-        { method: "GET" }
-      );
+      const response = await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}`, { method: "GET" });
       setSelectedSemester(response.data as Semester);
-      const bkdresponse = await fetchDataAuthenticated(
-        `http://localhost:5067/users/semesters/${id}`,
-        { method: "GET" }
-      );
+      const bkdresponse = await fetchDataAuthenticated(`http://localhost:5067/users/semesters/${id}`, { method: "GET" });
       setSelectedSemesterBKD(bkdresponse.data);
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const response = await fetchDataAuthenticated(
-          "http://localhost:5067/semesters",
-          { method: "GET" }
-        );
+        const response = await fetchDataAuthenticated("http://localhost:5067/semesters", { method: "GET" });
         setSemesters(response.data as Semester[]);
-      } catch (error) {
-        console.error(error);
-      }
+      } catch (error) { console.error(error); }
     }
     fetchInitialData();
   }, []);
 
   return (
-    <main
-      className={`min-h-screen bg-gray-50 p-8 ${inter.className}`} style={{ backgroundColor: '#F3F4FF' }}
-    >
-      <header className="flex justify-between items-center mb-8 border-b border-gray-300 pb-4">
-        <div className="flex items-center gap-6">
-          <h1 className="text-4xl font-bold text-gray-800 text-[#263C92]">Admin Dashboard</h1>
-          <Link href="/admin/users" legacyBehavior><Button className="bg-[#F8F8F8] text-[#343A40]" variant="outline">Manage Users</Button></Link>
-          <Link href="/admin/semesters" legacyBehavior><Button className="bg-[#F8F8F8] text-[#343A40]" variant="outline">Manage Semesters</Button></Link>
-        </div>
-        <div className="flex items-center gap-4 text-gray-700">
-          <span className="text-lg font-medium">Hi, {processedUserData?.name || "Admin"}!</span>
-          <Button onClick={logout} variant="outline" className="wrounded-lg transition-colors bg-[#DD3333] text-white hover:bg-red-200 hover:text-red-800 border border-red-100">
-            Logout
-          </Button>
-        </div>
-      </header>
 
+    <AppLayout 
+      role="admin" 
+      userName={processedUserData?.name} 
+      onLogout={logout}
+    >
       <div className="grid grid-rows-2 grid-cols-3 w-full gap-5">
         <ScrollArea className="h-[90.5vh] row-span-2 rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">Semesters</h4>
@@ -398,14 +288,7 @@ export default function Home() {
               </h4>
               {!selectedSemester.is_active && (
                 <div>
-                  <Button
-                    size="sm"
-                    onClick={setActive(selectedSemester.id)}
-                    variant="outline"
-                    className="text-sm my-1 me-1 bg-[#F8F8F8] text-[#343A40]"
-                  >
-                    Activate
-                  </Button>
+                  <Button size="sm" onClick={setActive(selectedSemester.id)} variant="outline" className="text-sm my-1 me-1 bg-[#F8F8F8] text-[#343A40]">Activate</Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button className="bg-[#DD3333]" size="sm" variant="destructive">Delete</Button>
@@ -428,9 +311,7 @@ export default function Home() {
             </div>
             ) : (
                 <>
-                <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">
-                  Courses
-                  </h2>
+                <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">Courses</h2>
                   <div className="flex items-center justify-center h-full">
                     <p className="text-[#525F7F] text-center">Select a semester to view courses</p>
                   </div>
@@ -438,16 +319,11 @@ export default function Home() {
           )}
 
           <div className="grid grid-cols-8 gap-2">
-            {selectedSemester &&
-              selectedSemester.courses &&
-              selectedSemester.courses
+            {selectedSemester && selectedSemester.courses && selectedSemester.courses
                 .sort((a, b) => a.code.localeCompare(b.code))
-                .map(
-                  (course) =>
+                .map((course) =>
                   <React.Fragment key={course.id}>
-                    <div
-                      className="my-1 col-span-7 flex justify-between items-start py-2 min-h-[54px] border rounded-md px-3"
-                    >
+                    <div className="my-1 col-span-7 flex justify-between items-start py-2 min-h-[54px] border rounded-md px-3">
                       <div className="text-base font-medium flex flex-col text-[#2C3E50]">
                         <span>{course.name}</span>
                       </div>
@@ -462,12 +338,7 @@ export default function Home() {
                     </div>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                        variant="destructive"
-                        className="text-base my-1 min-h-[60.5px]"
-                      >
-                        <TrashIcon />
-                      </Button>
+                        <Button variant="destructive" className="text-base my-1 min-h-[60.5px]"><TrashIcon /></Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -495,8 +366,6 @@ export default function Home() {
               <div className="grid grid-cols-1 gap-2 p-2">
                 <Form {...courseForm}>
                   <form onSubmit={courseForm.handleSubmit(onSubmitCourse)} className="w-full md:w-5/6 space-y-6">
-                    
-                    {/* === FITUR: MENU DROPDOWN COURSE === */}
                     <div className="space-y-2">
                       <FormLabel className="text-base font-bold text-[#263C92]">Pilih / Tambah Mata Kuliah</FormLabel>
                       <CourseSelect 
@@ -505,14 +374,10 @@ export default function Home() {
                             setSelectedCourseDropdown(data);
                             if (data) {
                                courseForm.setValue("name", data.originalName || data.label);
-                               if (!data.isNew) {
-                                   courseForm.setValue("code", data.value);
-                               } else {
-                                   courseForm.setValue("code", ""); // Kosongkan agar bisa diketik
-                               }
+                               if (!data.isNew) courseForm.setValue("code", data.value);
+                               else courseForm.setValue("code", ""); 
                             } else {
-                               courseForm.setValue("name", "");
-                               courseForm.setValue("code", "");
+                               courseForm.setValue("name", ""); courseForm.setValue("code", "");
                             }
                          }}
                       />
@@ -525,11 +390,7 @@ export default function Home() {
                         <FormItem>
                           <FormLabel className="text-base">Code</FormLabel>
                           <FormControl>
-                            <Input 
-                               placeholder="Contoh: KOM101" 
-                               {...field} 
-                               disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew} 
-                            />
+                            <Input placeholder="Contoh: KOM101" {...field} disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -542,11 +403,7 @@ export default function Home() {
                         <FormItem>
                           <FormLabel className="text-base text-[#2C3E50]">Name</FormLabel>
                           <FormControl>
-                            <Input 
-                               placeholder="Nama mata kuliah" 
-                               {...field} 
-                               disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew}
-                            />
+                            <Input placeholder="Nama mata kuliah" {...field} disabled={selectedCourseDropdown && !selectedCourseDropdown.isNew} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -554,41 +411,23 @@ export default function Home() {
                     />
                     
                     <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={courseForm.control}
-                        name="kuliah_credit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">SKS Kuliah</FormLabel>
-                            <FormControl>
-                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                            </FormControl>
+                      <FormField control={courseForm.control} name="kuliah_credit" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">SKS Kuliah</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={courseForm.control}
-                        name="praktikum_credit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">SKS Praktikum</FormLabel>
-                            <FormControl>
-                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                            </FormControl>
+                      <FormField control={courseForm.control} name="praktikum_credit" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">SKS Praktikum</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={courseForm.control}
-                        name="responsi_credit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">SKS Responsi</FormLabel>
-                            <FormControl>
-                              <Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                            </FormControl>
+                      <FormField control={courseForm.control} name="responsi_credit" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">SKS Responsi</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -596,77 +435,32 @@ export default function Home() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={courseForm.control}
-                        name="kuliah_class_count"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Kuliah</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="0" 
-                                {...field} 
-                                type="number" 
-                                min="0" 
-                                disabled={!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0}
-                                className={(!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0) ? "bg-gray-100" : ""}
-                              />
-                            </FormControl>
+                      <FormField control={courseForm.control} name="kuliah_class_count" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">Kelas Kuliah</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" disabled={!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0} className={(!watchKuliahCredit || parseInt(watchKuliahCredit) <= 0) ? "bg-gray-100" : ""}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={courseForm.control}
-                        name="praktikum_class_count"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Praktikum</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="0" 
-                                {...field} 
-                                type="number" 
-                                min="0" 
-                                disabled={!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0}
-                                className={(!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0) ? "bg-gray-100" : ""}
-                              />
-                            </FormControl>
+                      <FormField control={courseForm.control} name="praktikum_class_count" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">Kelas Praktikum</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" disabled={!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0} className={(!watchPraktikumCredit || parseInt(watchPraktikumCredit) <= 0) ? "bg-gray-100" : ""}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={courseForm.control}
-                        name="responsi_class_count"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm text-[#2C3E50]">Kelas Responsi</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="0" 
-                                {...field} 
-                                type="number" 
-                                min="0" 
-                                disabled={!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0}
-                                className={(!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0) ? "bg-gray-100" : ""}
-                              />
-                            </FormControl>
+                      <FormField control={courseForm.control} name="responsi_class_count" render={({ field }) => (
+                          <FormItem><FormLabel className="text-sm text-[#2C3E50]">Kelas Responsi</FormLabel>
+                            <FormControl><Input placeholder="0" {...field} type="number" min="0" disabled={!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0} className={(!watchResponsiCredit || parseInt(watchResponsiCredit) <= 0) ? "bg-gray-100" : ""}/></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
 
-                    <FormField
-                      control={courseForm.control}
-                      name="semesters"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base text-[#2C3E50]">Semesters (Tingkat)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Contoh: 1, 3, 5" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/>
-                          </FormControl>
+                    <FormField control={courseForm.control} name="semesters" render={({ field }) => (
+                        <FormItem><FormLabel className="text-base text-[#2C3E50]">Semesters (Tingkat)</FormLabel>
+                          <FormControl><Input placeholder="Contoh: 1, 3, 5" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/></FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -678,13 +472,9 @@ export default function Home() {
             </div>
           ) : (
             <>
-              <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">
-                Create a new course
-                </h2>
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-[#525F7F] text-center">Select a semester to create new course</p>
-                </div>
-              </>
+              <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">Create a new course</h2>
+              <div className="flex items-center justify-center h-full"><p className="text-[#525F7F] text-center">Select a semester to create new course</p></div>
+            </>
           )}
         </ScrollArea>
         <Card className="h-[44vh] col-span-2 rounded-md border-0 shadow-md p-4 bg-white">
@@ -695,38 +485,24 @@ export default function Home() {
             </div>
             ) : (
             <>
-              <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">
-                BKD Graph
-                </h2>
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-[#525F7F] text-center">Select a semester to view BKD graph</p>
-                </div>
-              </>
+              <h2 className="text-xl text-[#2C3E50] font-semibold border-b border-gray-300 pb-2 mb-4">BKD Graph</h2>
+              <div className="flex items-center justify-center h-full"><p className="text-[#525F7F] text-center">Select a semester to view BKD graph</p></div>
+            </>
           )}
         </Card>
       </div>
 
-      {/* Pop-up Peringatan Error */}
       <AlertDialog open={!!errorMessage} onOpenChange={(open) => !open && setErrorMessage(null)}>
         <AlertDialogContent className="bg-white border-red-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600 text-xl flex items-center gap-2">
-              ⚠️ Peringatan
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-700 text-base mt-2">
-              {errorMessage}
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-red-600 text-xl flex items-center gap-2">⚠️ Peringatan</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-700 text-base mt-2">{errorMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button 
-              className="bg-[#4D44B5] text-white hover:bg-[#3a338a]" 
-              onClick={() => setErrorMessage(null)}
-            >
-              Mengerti
-            </Button>
+            <Button className="bg-[#4D44B5] text-white hover:bg-[#3a338a]" onClick={() => setErrorMessage(null)}>Mengerti</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+    </AppLayout>
   );
 }

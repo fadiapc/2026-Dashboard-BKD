@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Inter } from "next/font/google";
 import React, { useEffect, useState } from "react";
 import { removeToken, useCheckToken } from "@/utils/cookie";
 import { ProcessedCoursesResult } from "@/interfaces/course";
@@ -9,11 +8,10 @@ import { useRouter } from "next/navigation";
 import { NewUser, User } from "@/interfaces/user";
 import { processUserSemesters } from "@/utils/semester";
 import { ProcessedUserWithSemesters } from "@/interfaces/semester";
-import Link from "next/link";
 import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { TrashIcon, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { TrashIcon, Eye, EyeOff } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -25,7 +23,7 @@ import {
   AlertDialogCancel,
   AlertDialogDanger
 } from "@/components/ui/alert-dialog";
-const inter = Inter({ subsets: ["latin"] });
+import { AppLayout } from "@/components/AppLayout";
 
 export default function Home() {
   const courseTypeNames = {
@@ -41,7 +39,6 @@ export default function Home() {
   const [selectedSemester, setSelectedSemester] = useState<ProcessedCoursesResult | null>(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [processedUserData, setProcessedUserData] = useState<ProcessedCoursesResult>();
-  const [updatedSchedules, setUpdatedSchedules] = useState({});
   const [newUser, setNewUser] = useState<NewUser>({
     name: "",
     initials: "",
@@ -50,7 +47,6 @@ export default function Home() {
     is_active: false,
   });
   
-  // State Baru untuk Password & Konfirmasi
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -69,7 +65,7 @@ export default function Home() {
         is_admin: false,
         is_active: false,
       });
-      setConfirmPassword(""); // Reset konfirmasi password
+      setConfirmPassword("");
       setCreateUserError("");
       setCreateUserSuccess("");
       setShowPassword(false);
@@ -92,7 +88,6 @@ export default function Home() {
         throw new Error("Active option must be selected");
       }
 
-      // Validasi kecocokan password
       if (newUser.password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
@@ -125,7 +120,7 @@ export default function Home() {
     }
   };
 
-    const deleteUsers = async (id: number) => {
+  const deleteUsers = async (id: number) => {
     try {
       await fetchDataAuthenticated(
         `http://localhost:5067/users/${id}`,
@@ -172,28 +167,16 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      className={`min-h-screen bg-gray-50 p-8 ${inter.className}`} style={{ backgroundColor: '#F3F4FF' }}
+    <AppLayout 
+      role="admin" 
+      userName={processedUserData?.name} 
+      onLogout={logout}
     >
-      <header className="flex justify-between items-center mb-8 border-b border-gray-300 pb-4">
-        <div className="flex items-center gap-6">
-          <h1 className="text-4xl font-bold text-gray-800 text-[#263C92]">Admin Dashboard</h1>
-          <Link href="/admin/users" legacyBehavior><Button className="bg-[#F8F8F8] text-[#343A40]" variant="outline">Manage Users</Button></Link>
-          <Link href="/admin/semesters" legacyBehavior><Button className="bg-[#F8F8F8] text-[#343A40]" variant="outline">Manage Semesters</Button></Link>
-        </div>
-        <div className="flex items-center gap-4 text-gray-700">
-          <span className="text-lg font-medium">Hi, {processedUserData?.name || "Admin"}!</span>
-          <Button onClick={logout} variant="outline" className="wrounded-lg transition-colors bg-[#DD3333] text-white hover:bg-red-200 hover:text-red-800 border border-red-100">
-            Logout
-          </Button>
-        </div>
-      </header>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ScrollArea className="h-[80vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[80vh] rounded-md border-0 shadow-md p-4 bg-white">
           <div className="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
             <h2 className="text-xl font-semibold mb-2 text-[#2C3E50]">Users</h2>
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
                 <div>
                   <Button className="bg-[#F8F8F8] text-[#343A40]" size="sm" variant="outline">+ Add User</Button>
@@ -238,7 +221,6 @@ export default function Home() {
                     />
                   </div>
                   
-                  {/* Field Password dengan Mata */}
                   <div className="grid grid-cols-7 items-center gap-4">
                     <Label htmlFor="password" className="col-span-2 text-right text-[#2C3E50]">
                       Password
@@ -265,7 +247,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Field Konfirmasi Password dengan Mata */}
                   <div className="grid grid-cols-7 items-center gap-4">
                     <Label htmlFor="confirmPassword" className="col-span-2 text-right text-[#2C3E50]">
                       Confirm
@@ -343,7 +324,7 @@ export default function Home() {
             </Dialog>
           </div>
           
-<div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {users &&
               users
                 .filter(user => !user.is_admin)
@@ -391,7 +372,7 @@ export default function Home() {
           </div>
         </ScrollArea>
 
-        <ScrollArea className="h-[80vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[80vh] rounded-md border-0 shadow-md p-4 bg-white">
           {selectedUser ? (
             <>
               <h2 className="text-xl font-semibold border-b border-gray-300 pb-4 mb-4 text-[#2C3E50]">
@@ -435,7 +416,7 @@ export default function Home() {
           )}
         </ScrollArea>
 
-        <ScrollArea className="rounded-md border p-4 bg-white">
+        <ScrollArea className="rounded-md border-0 shadow-md p-4 bg-white">
           {selectedUser && selectedSemester ? (
             <>
             <h2 className="text-xl font-semibold border-b border-gray-300 pb-4 mb-4 text-[#2C3E50]">
@@ -474,6 +455,6 @@ export default function Home() {
           )}
         </ScrollArea>
       </div>
-    </main>
+    </AppLayout>
   );
 }

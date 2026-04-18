@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Inter } from "next/font/google";
 import React, { useEffect, useState } from "react";
 import { getJWTPayload, removeToken, useCheckToken } from "@/utils/cookie";
 import {
@@ -20,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-const inter = Inter({ subsets: ["latin"] });
+import { AppLayout } from "@/components/AppLayout";
 
 export default function Home() {
   const courseTypeNames = {
@@ -67,7 +66,7 @@ export default function Home() {
         }
       )
       setChangePasswordSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setChangePasswordError(error.message);
     }
@@ -158,26 +157,13 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      className={`flex flex-col items-center justify-between p-6 ${inter.className}`} style={{ backgroundColor: '#F3F4FF' }}
+    <AppLayout 
+      role="user" 
+      userName={processedUserData?.name} 
+      onLogout={logout}
     >
-      <header className="flex justify-between items-center mb-8 border-b border-gray-300 pb-4 w-full">
-        <div className="flex items-center gap-6">
-          <h1 className="text-4xl font-bold text-[#263C92]">Dashboard</h1>
-        </div>
-        <div className="flex items-center gap-4 text-gray-700">
-          <span className="text-lg">
-            Hi, {processedUserData?.name}!
-          </span>
-          {isAdmin && <Button onClick={() => router.push("/admin")} variant="outline" className="ml-4">Admin Dashboard</Button>}
-            <Button onClick={logout} variant="outline" className="wrounded-lg transition-colors bg-[#DD3333] text-white hover:bg-red-200 hover:text-red-800 border border-red-100">
-              Logout
-            </Button>
-        </div>
-      </header>
-
       <div className="grid grid-rows-2 grid-cols-3 w-full gap-5">
-        <ScrollArea className="h-[83vh] row-span-2 rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[83vh] row-span-2 rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="border-b border-gray-300 pb-1 mb-4"><span className="text-xl font-semibold text-[#2C3E50]">Courses</span></h4>
           <div className="grid grid-cols-1 gap-2">
             {courses &&
@@ -204,7 +190,7 @@ export default function Home() {
               ))}
           </div>
         </ScrollArea>
-        <ScrollArea className="h-[40vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[40vh] rounded-md border-0 shadow-md p-4 bg-white">
             <h4 className="border-b border-gray-300 pb-1 mb-4 text-[#2C3E50]">
               <span className="text-xl font-semibold">
                 {selectedCourse ? `Classes of ${selectedCourse.name}` : "Classes"}
@@ -243,7 +229,7 @@ export default function Home() {
                 )}
           </div>
         </ScrollArea>
-        <ScrollArea className="h-[40vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[40vh] rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="border-b border-gray-300 pb-1 mb-4 text-[#2C3E50]">
             <span className="text-xl font-semibold">Schedule</span>
           </h4>
@@ -318,7 +304,7 @@ export default function Home() {
             )}
           </div>
         </ScrollArea>
-        <Card className="h-[40vh] rounded-md border p-4 bg-white">
+        <Card className="h-[40vh] rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="border-b border-gray-300 pb-1 mb-4"><span className="text-xl font-semibold text-[#2C3E50]">My Data</span></h4>
           <div className="grid gap-4">
             <div className="text-base text-[#2C3E50]"><span className="font-bold">Name:</span> {processedUserData?.name}</div>
@@ -404,7 +390,7 @@ export default function Home() {
             </Dialog>
           </div>
         </Card>
-        <ScrollArea className="h-[40vh] rounded-md border p-4 bg-white">
+        <ScrollArea className="h-[40vh] rounded-md border-0 shadow-md p-4 bg-white">
           <h4 className="border-b border-gray-300 pb-1 mb-4 text-[#2C3E50]"><span className="text-xl font-semibold">My Course</span></h4>
           <div className="grid gap-4">
             {processedUserData &&
@@ -424,6 +410,6 @@ export default function Home() {
           </div>
         </ScrollArea>
       </div>
-    </main>
+    </AppLayout>
   );
 }
