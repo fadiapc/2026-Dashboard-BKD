@@ -11,7 +11,7 @@ import { ProcessedUserWithSemesters } from "@/interfaces/semester";
 import { DialogHeader, DialogFooter, Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { TrashIcon, Eye, EyeOff } from "lucide-react";
+import { TrashIcon, Eye, EyeOff, Key, Power } from "lucide-react"; 
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -21,7 +21,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
-  AlertDialogDanger
+  AlertDialogDanger,
+  AlertDialogAction
 } from "@/components/ui/alert-dialog";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -44,7 +45,6 @@ export default function Home() {
     initials: "",
     password: "",
     is_admin: false,
-    is_active: false,
   });
   
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,6 +53,7 @@ export default function Home() {
 
   const [createUserError, setCreateUserError] = useState("");
   const [createUserSuccess, setCreateUserSuccess] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -63,7 +64,6 @@ export default function Home() {
         initials: "",
         password: "",
         is_admin: false,
-        is_active: false,
       });
       setConfirmPassword("");
       setCreateUserError("");
@@ -84,10 +84,6 @@ export default function Home() {
         throw new Error("Initials must be 3 characters long");
       }
 
-      if (!newUser.is_active) {
-        throw new Error("Active option must be selected");
-      }
-
       if (newUser.password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
@@ -96,7 +92,12 @@ export default function Home() {
         "http://localhost:5067/users",
         { 
           method: "POST",
-          body: JSON.stringify(newUser)
+          body: JSON.stringify({
+            name: newUser.name,
+            initials: newUser.initials,
+            password: newUser.password,
+            is_admin: newUser.is_admin
+          })
         }
       );
       
@@ -134,6 +135,42 @@ export default function Home() {
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Failed to delete user.");
+    }
+  };
+
+  // --- TOGGLE AKTIF/NONAKTIF USER ---
+  const toggleUserStatus = async (user: User) => {
+    try {
+      const payload = {
+        is_admin: user.is_admin,
+        is_active: !user.is_active
+      };
+      await fetchDataAuthenticatedWithBody(
+        `http://localhost:5067/users/${user.id}`,
+        { 
+          method: "PUT",
+          body: JSON.stringify(payload)
+        }
+      );
+      // Update state lokal
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_active: !user.is_active } : u));
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      alert("Gagal mengubah status aktif dosen.");
+    }
+  };
+
+  // --- RESET PASSWORD ---
+  const resetPassword = async (id: number) => {
+    try {
+      await fetchDataAuthenticated(
+        `http://localhost:5067/users/reset-password/${id}`,
+        { method: "POST" }
+      );
+      setSuccessMessage("Berhasil! Password telah direset menjadi 'Dosen123!'");
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert("Gagal mereset password.");
     }
   };
 
@@ -289,22 +326,8 @@ export default function Home() {
                       }}
                     />
                   </div>
-                  <div className="grid grid-cols-7 items-center gap-4">
-                    <Label htmlFor="is_active" className="col-span-2 text-right text-[#2C3E50]">
-                      Active
-                    </Label>
-                    <Input
-                      id="is_active"
-                      name="is_active"
-                      className="w-4 h-4"
-                      type="checkbox"
-                      checked={newUser.is_active}
-                      onChange={(e) => {
-                        setNewUser({ ...newUser, is_active: e.target.checked });
-                        setCreateUserError("");
-                      }}
-                    />
-                  </div>
+                  {/* backend otomatis menjadikan Aktif saat dibuat */}
+                  
                   {createUserError && (
                     <div className="text-red-600 text-sm text-center">{createUserError}</div>
                   )}
@@ -330,13 +353,14 @@ export default function Home() {
                 .filter(user => !user.is_admin)
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map(user => (
-                  <div key={user.id} className="flex justify-between items-center w-full">
+                  <div key={user.id} className="flex justify-between items-center w-full gap-1">
                     <Button
                       onClick={() => {
                         fetchUserSemesters(user.id);
                         setSelectedUserId(user.id);
                       }}
                       className={`flex-1 text-left p-3 rounded-lg transition-colors flex ${
+                        !user.is_active ? "line-through text-gray-400 bg-gray-50" :
                         selectedUserId === user.id
                         ? "bg-[#837AE8] text-white hover:bg-[#837AE8] hover:text-white border"
                         : "bg-white-100 text-[#525F7F] hover:bg-[#EAE8FF] border"
@@ -345,28 +369,81 @@ export default function Home() {
                       <span>{user.name} : BKD {user.bkd}</span>
                     </Button>
 
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          className="ml-2 p-3 h-auto"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the user <code><strong>{user.name}</strong></code>.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogDanger onClick={() => deleteUsers(user.id)}>Delete</AlertDialogDanger>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <div className="flex gap-1">
+                      {/* --- TOMBOL TOGGLE STATUS --- */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className={`p-3 h-auto ${user.is_active ? "text-green-600" : "text-gray-400"}`}
+                            title={user.is_active ? "Nonaktifkan Dosen" : "Aktifkan Dosen"}
+                          >
+                            <Power className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Ubah Status Dosen?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Apakah Anda yakin ingin {user.is_active ? <strong>menonaktifkan</strong> : <strong>mengaktifkan kembali</strong>} akun <code>{user.name}</code>?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => toggleUserStatus(user)} className="bg-[#4D44B5]">
+                              Ya, Ubah Status
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
+                      {/* --- TOMBOL RESET PASSWORD --- */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" className="p-3 h-auto text-yellow-600" title="Reset Password">
+                            <Key className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Reset Password?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Ini akan mengembalikan password <code>{user.name}</code> ke sandi bawaan sistem (<strong>Dosen123!</strong>). Aksi ini tidak dapat dibatalkan.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => resetPassword(user.id)} className="bg-yellow-600 hover:bg-yellow-700">
+                              Ya, Reset Password
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
+                      {/* --- TOMBOL HAPUS --- */}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            className="p-3 h-auto"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the user <code><strong>{user.name}</strong></code>.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogDanger onClick={() => deleteUsers(user.id)}>Delete</AlertDialogDanger>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 ))}
           </div>
@@ -436,7 +513,7 @@ export default function Home() {
                     <div className="font-semibold">{course.code}</div>
                     <div className="text-sm">
                       {course.counts
-                        .map((count) => `${courseTypeNames[count.type]}: ${count.count}`)
+                        .map((count) => `${courseTypeNames[count.type as keyof typeof courseTypeNames]}: ${count.count}`)
                         .join(", ")}
                     </div>
                   </div>
@@ -455,6 +532,28 @@ export default function Home() {
           )}
         </ScrollArea>
       </div>
+
+      {/* Pop-up Pesan Sukses */}
+      <AlertDialog open={!!successMessage} onOpenChange={(open) => !open && setSuccessMessage(null)}>
+        <AlertDialogContent className="bg-white border-green-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-green-600 text-xl flex items-center gap-2">
+              ✅ Berhasil
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-700 text-base mt-2">
+              {successMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button 
+              className="bg-[#4D44B5] text-white hover:bg-[#3a338a]" 
+              onClick={() => setSuccessMessage(null)}
+            >
+              Tutup
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

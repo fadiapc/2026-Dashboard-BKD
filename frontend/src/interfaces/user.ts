@@ -15,7 +15,7 @@ export interface NewUser {
     initials: string;
     is_admin: boolean;
     password: string;
-    is_active: boolean;
+    is_active?: boolean;
 }
 
 export interface ExtendedUser extends User {
