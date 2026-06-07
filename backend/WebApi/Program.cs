@@ -5,8 +5,11 @@ using Microsoft.OpenApi.Models; // <-- Kembali pakai .Models
 using WebApi.Config;
 using WebApi.Data;
 using WebApi.Models;
+using WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var secretPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "secret.json"));
+builder.Configuration.AddJsonFile(secretPath, optional: false, reloadOnChange: true);
 Secret.Initialize(builder.Configuration);
 
 static void CheckDatabaseConnection(IServiceProvider serviceProvider)
@@ -58,6 +61,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // --- SWAGGER VERSI STABIL ---
 builder.Services.AddSwaggerGen(c =>
@@ -96,28 +100,7 @@ var app = builder.Build();
 
 CheckDatabaseConnection(app.Services);
 
-async Task InitializeDatabaseAsync(IServiceProvider serviceProvider)
-{
-    using var scope = serviceProvider.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-    var adminExists = await context.Users.AnyAsync(u => u.IsAdmin && u.IsActive);
-    if (!adminExists)
-    {
-        var user = new User
-        {
-            Name = Secret.AdminName,
-            InitialChar = Secret.AdminInitials,
-            IsAdmin = true,
-            Password = BCrypt.Net.BCrypt.HashPassword(Secret.AdminPassword),
-            Email = "",
-            IsActive = true
-        };
-        context.Users.Add(user);
-        await context.SaveChangesAsync();
-    }
-}
-
-await InitializeDatabaseAsync(app.Services);
+await Seed.InitializeDatabaseAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
