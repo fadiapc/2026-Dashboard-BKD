@@ -459,11 +459,12 @@ export default function Home() {
                     </div>
 
                     <FormField control={courseForm.control} name="semesters" render={({ field }) => (
-                        <FormItem><FormLabel className="text-base text-[#2C3E50]">Semesters (Tingkat)</FormLabel>
-                          <FormControl><Input placeholder="Contoh: 1, 3, 5" {...field} type="number" min="0" onWheel={(e) => e.currentTarget.blur()}/></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                        <FormItem><FormLabel className="text-base text-[#2C3E50]">Semesters</FormLabel>
+                          <FormControl><Input placeholder="Contoh: 1, 2... 14" {...field} type="number" min="1" max="14" onWheel={(e) => e.currentTarget.blur()}/>
+                        </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    )}
                     />
                     <Button type="submit" className="text-base bg-[#4D44B5] w-full">Save Course</Button>
                   </form>

@@ -40,12 +40,15 @@ export default function Home() {
   const [selectedSemester, setSelectedSemester] = useState<ProcessedCoursesResult | null>(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [processedUserData, setProcessedUserData] = useState<ProcessedCoursesResult>();
+  
+  // State Add User
   const [newUser, setNewUser] = useState<NewUser>({
     name: "",
     initials: "",
     password: "",
     is_admin: false,
   });
+  const [email, setEmail] = useState(""); //nambahin state email
   
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -65,6 +68,7 @@ export default function Home() {
         password: "",
         is_admin: false,
       });
+      setEmail("");
       setConfirmPassword("");
       setCreateUserError("");
       setCreateUserSuccess("");
@@ -96,7 +100,8 @@ export default function Home() {
             name: newUser.name,
             initials: newUser.initials,
             password: newUser.password,
-            is_admin: newUser.is_admin
+            is_admin: newUser.is_admin,
+            email: email
           })
         }
       );
@@ -138,7 +143,6 @@ export default function Home() {
     }
   };
 
-  // --- TOGGLE AKTIF/NONAKTIF USER ---
   const toggleUserStatus = async (user: User) => {
     try {
       const payload = {
@@ -152,7 +156,6 @@ export default function Home() {
           body: JSON.stringify(payload)
         }
       );
-      // Update state lokal
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_active: !user.is_active } : u));
     } catch (error) {
       console.error("Error toggling user status:", error);
@@ -160,7 +163,6 @@ export default function Home() {
     }
   };
 
-  // --- RESET PASSWORD ---
   const resetPassword = async (id: number) => {
     try {
       await fetchDataAuthenticated(
@@ -257,6 +259,25 @@ export default function Home() {
                       }}
                     />
                   </div>
+
+                  {/* FORM INPUT EMAIL BARU */}
+                  <div className="grid grid-cols-7 items-center gap-4">
+                    <Label htmlFor="email" className="col-span-2 text-right text-[#2C3E50] text-xs">
+                      Email (Ops)
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      className="col-span-5"
+                      type="email"
+                      placeholder="opsional..."
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setCreateUserError("");
+                      }}
+                    />
+                  </div>
                   
                   <div className="grid grid-cols-7 items-center gap-4">
                     <Label htmlFor="password" className="col-span-2 text-right text-[#2C3E50]">
@@ -326,7 +347,6 @@ export default function Home() {
                       }}
                     />
                   </div>
-                  {/* backend otomatis menjadikan Aktif saat dibuat */}
                   
                   {createUserError && (
                     <div className="text-red-600 text-sm text-center">{createUserError}</div>
@@ -370,7 +390,6 @@ export default function Home() {
                     </Button>
 
                     <div className="flex gap-1">
-                      {/* --- TOMBOL TOGGLE STATUS --- */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
@@ -397,7 +416,6 @@ export default function Home() {
                         </AlertDialogContent>
                       </AlertDialog>
 
-                      {/* --- TOMBOL RESET PASSWORD --- */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" className="p-3 h-auto text-yellow-600" title="Reset Password">
@@ -420,7 +438,6 @@ export default function Home() {
                         </AlertDialogContent>
                       </AlertDialog>
 
-                      {/* --- TOMBOL HAPUS --- */}
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
