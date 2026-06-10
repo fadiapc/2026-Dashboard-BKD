@@ -26,7 +26,7 @@ static void CheckDatabaseConnection(IServiceProvider serviceProvider)
     catch (Exception ex)
     {
         Console.WriteLine($"Failed to connect to the database: {ex.Message}");
-        Environment.Exit(-1);
+        // Environment.Exit(-1); // Prevent Azure Web App from crashing repeatedly
     }
 }
 
@@ -104,7 +104,14 @@ var app = builder.Build();
 
 CheckDatabaseConnection(app.Services);
 
-await Seed.InitializeDatabaseAsync(app.Services);
+try
+{
+    await Seed.InitializeDatabaseAsync(app.Services);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to seed the database: {ex.Message}");
+}
 
 if (app.Environment.IsDevelopment())
 {
