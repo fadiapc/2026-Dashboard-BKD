@@ -51,10 +51,14 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(
         name: "allowall",
-        policy  => {
-            policy.AllowAnyOrigin(); 
-            policy.AllowAnyHeader();
-            policy.AllowAnyMethod();
+        policy => {
+            policy.WithOrigins(
+                    "http://localhost:3000",
+                    "https://dashboard-bkd.vercel.app"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
         });
 });
 
@@ -108,7 +112,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("allowall");
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
