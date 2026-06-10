@@ -91,7 +91,7 @@ export default function Home() {
     };
     const createSemester = async () => {
       try {
-        const response = await fetchDataAuthenticatedWithBody("http://localhost:5067/semesters", {
+        const response = await fetchDataAuthenticatedWithBody(`${process.env.NEXT_PUBLIC_API_URL}/semesters`, {
           method: "POST", body: JSON.stringify(payload),
         });
         setSemesters((prev) => [...prev, response.data]);
@@ -126,7 +126,7 @@ export default function Home() {
 
     const createCourse = async () => {
       try {
-        const response = await fetchDataAuthenticatedWithBody("http://localhost:5067/courses", {
+        const response = await fetchDataAuthenticatedWithBody(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           method: "POST", body: JSON.stringify(payload),
         });
         const newCourse = await response.data;
@@ -153,7 +153,7 @@ export default function Home() {
   
   const setActive = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}/activate`, { method: "PUT" });
+      await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/semesters/${id}/activate`, { method: "PUT" });
       setSemesters((prev) => prev.map((semester) => ({ ...semester, is_active: semester.id === id })));
       setSelectedSemester((prev) => prev && { ...prev, is_active: true });
     } catch (error) { console.error(error); }
@@ -161,7 +161,7 @@ export default function Home() {
 
   const deleteSemester = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}`, { method: "DELETE" });
+      await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/semesters/${id}`, { method: "DELETE" });
       setSemesters((prev) => prev.filter((semester) => semester.id !== id));
       setSelectedSemester(null);
     } catch (error) { console.error(error); }
@@ -169,16 +169,16 @@ export default function Home() {
 
   const deleteCourse = (id: number) => async () => {
     try {
-      await fetchDataAuthenticated(`http://localhost:5067/courses/${id}`, { method: "DELETE" });
+      await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/courses/${id}`, { method: "DELETE" });
       setSelectedSemester((prev) => prev && { ...prev, courses: prev.courses.filter((course) => course.id !== id) });
     } catch (error) { console.error(error); }
   }
 
   const fetchSemesters = async (id: number) => {
     try {
-      const response = await fetchDataAuthenticated(`http://localhost:5067/semesters/${id}`, { method: "GET" });
+      const response = await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/semesters/${id}`, { method: "GET" });
       setSelectedSemester(response.data as Semester);
-      const bkdresponse = await fetchDataAuthenticated(`http://localhost:5067/users/semesters/${id}`, { method: "GET" });
+      const bkdresponse = await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/users/semesters/${id}`, { method: "GET" });
       setSelectedSemesterBKD(bkdresponse.data);
     } catch (error) { console.error(error); }
   };
@@ -186,7 +186,7 @@ export default function Home() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const response = await fetchDataAuthenticated("http://localhost:5067/semesters", { method: "GET" });
+        const response = await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/semesters`, { method: "GET" });
         setSemesters(response.data as Semester[]);
       } catch (error) { console.error(error); }
     }

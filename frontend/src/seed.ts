@@ -1,6 +1,6 @@
 const loginAndGetToken = async (username: string, password: string): Promise<string> => {
     try {
-        const response = await fetch('http://localhost:5067/auth/login', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -27,7 +27,7 @@ const loginAndGetToken = async (username: string, password: string): Promise<str
 
 const createUser = async (user: { name: string, initials: string, is_admin: boolean, password: string, is_active: boolean, token: string }, token: string) => {
     try {
-        const response = await fetch('http://localhost:5067/users', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ const createUser = async (user: { name: string, initials: string, is_admin: bool
 
 const createSemester = async (semester: { date: string }, token: string) => {
     try {
-        const response = await fetch('http://localhost:5067/semesters', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/semesters`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ const createSemester = async (semester: { date: string }, token: string) => {
 
 const activateSemester = async (semester_id: number, token: string) => {
     try {
-        const response = await fetch(`http://localhost:5067/semesters/${semester_id}/activate`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/semesters/${semester_id}/activate`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ const activateSemester = async (semester_id: number, token: string) => {
 
 const createCourse = async (course: { semester_id: number, name: string, code: string, course_type: { type: number, credit: number, class_count: number }[] }, token: string) => {
     try {
-        const response = await fetch('http://localhost:5067/courses', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ const createCourse = async (course: { semester_id: number, name: string, code: s
 
 const fillSchedule = async (schedule_id: number, token: string) => {
     try {
-        const response = await fetch(`http://localhost:5067/schedules/${schedule_id}/fill`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schedules/${schedule_id}/fill`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

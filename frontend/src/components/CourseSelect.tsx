@@ -23,7 +23,7 @@ export function CourseSelect({ value, onChange, error }: CourseSelectProps) {
     const fetchCatalog = async () => {
       setIsLoading(true);
       try {
-        const response = await fetchDataAuthenticated("http://localhost:5067/Courses/catalog", {
+        const response = await fetchDataAuthenticated(`${process.env.NEXT_PUBLIC_API_URL}/Courses/catalog`, {
           method: "GET"
         });
 

@@ -93,7 +93,7 @@ export default function Home() {
       }
 
       const response = await fetchDataAuthenticatedWithBody(
-        "http://localhost:5067/users",
+        `${process.env.NEXT_PUBLIC_API_URL}/users`,
         { 
           method: "POST",
           body: JSON.stringify({
@@ -129,7 +129,7 @@ export default function Home() {
   const deleteUsers = async (id: number) => {
     try {
       await fetchDataAuthenticated(
-        `http://localhost:5067/users/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${id}`,
         { method: "DELETE" }
       );
       setUsers(prev => prev.filter(user => user.id !== id));
@@ -150,7 +150,7 @@ export default function Home() {
         is_active: !user.is_active
       };
       await fetchDataAuthenticatedWithBody(
-        `http://localhost:5067/users/${user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}`,
         { 
           method: "PUT",
           body: JSON.stringify(payload)
@@ -166,7 +166,7 @@ export default function Home() {
   const resetPassword = async (id: number) => {
     try {
       await fetchDataAuthenticated(
-        `http://localhost:5067/users/reset-password/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/reset-password/${id}`,
         { method: "POST" }
       );
       setSuccessMessage("Berhasil! Password telah direset menjadi 'Dosen123!'");
@@ -179,7 +179,7 @@ export default function Home() {
   const fetchUserSemesters = async (id: number) => {
     try {
       const response = await fetchDataAuthenticated(
-        `http://localhost:5067/users/${id}/semesters`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${id}/semesters`,
         { method: "GET" }
       );
       const user = processUserSemesters(response);
@@ -194,7 +194,7 @@ export default function Home() {
     const fetchInitialData = async () => {
       try {
         const response = await fetchDataAuthenticated(
-          "http://localhost:5067/users",
+          `${process.env.NEXT_PUBLIC_API_URL}/users`,
           { method: "GET" }
         );
         setUsers(response.data as User[]);

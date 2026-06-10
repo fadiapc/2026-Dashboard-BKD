@@ -59,7 +59,7 @@ export default function Home() {
         confirm_new_password: confirmNewPassword,
       };
       await fetchDataAuthenticatedWithBody(
-        "http://localhost:5067/auth/password",
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/password`,
         { 
           method: "PUT",
           body: JSON.stringify(payload),
@@ -75,14 +75,14 @@ export default function Home() {
   const fillSchedule = async (scheduleId: number) => {
     try {
       await fetchDataAuthenticated(
-        `http://localhost:5067/schedules/${scheduleId}/fill`, { method: "PUT" }
+        `${process.env.NEXT_PUBLIC_API_URL}/schedules/${scheduleId}/fill`, { method: "PUT" }
       );
       if (selectedCourseClassId) {
         await fetchCourseClass(selectedCourseClassId);
       }
 
       const user = await fetchDataAuthenticated(
-        "http://localhost:5067/users/me",
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me`,
         { method: "GET" }
       );
       setProcessedUserData(extractUserData(user));
@@ -94,13 +94,13 @@ export default function Home() {
   const clearSchedule = async (scheduleId: number) => {
     try {
       await fetchDataAuthenticated(
-        `http://localhost:5067/schedules/${scheduleId}/clear`, { method: "PUT" }
+        `${process.env.NEXT_PUBLIC_API_URL}/schedules/${scheduleId}/clear`, { method: "PUT" }
       );
       if (selectedCourseClassId) {
         await fetchCourseClass(selectedCourseClassId);
       }
       const user = await fetchDataAuthenticated(
-        "http://localhost:5067/users/me",
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me`,
         { method: "GET" }
       );
       setProcessedUserData(extractUserData(user));
@@ -112,7 +112,7 @@ export default function Home() {
   const fetchCourse = async (id: number) => {
     try {
       const response = await fetchDataAuthenticated(
-        `http://localhost:5067/courses/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${id}`,
         { method: "GET" }
       );
       const course = response.data as Course;
@@ -125,7 +125,7 @@ export default function Home() {
   const fetchCourseClass = async (id: number) => {
     try {
       const response = await fetchDataAuthenticated(
-        `http://localhost:5067/courses/class/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/class/${id}`,
         { method: "GET" }
       );
       const courseClass = response.data as CourseClass;
@@ -139,11 +139,11 @@ export default function Home() {
     const fetchInitialData = async () => {
       try {
         const courses = await fetchDataAuthenticated(
-          "http://localhost:5067/courses",
+          `${process.env.NEXT_PUBLIC_API_URL}/courses`,
           { method: "GET" }
         );
         const user = await fetchDataAuthenticated(
-          "http://localhost:5067/users/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me`,
           { method: "GET" }
         );
         setIsAdmin(getJWTPayload("role") === "admin");
