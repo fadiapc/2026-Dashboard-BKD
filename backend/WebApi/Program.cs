@@ -53,7 +53,7 @@ builder.Services.AddCors(options =>
         name: "allowall",
         policy  => {
             policy.AllowAnyOrigin(); 
-            policy.WithHeaders("Content-Type", "Authorization");
+            policy.AllowAnyHeader();
             policy.AllowAnyMethod();
         });
 });
@@ -108,9 +108,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("allowall");
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseCors("allowall");
 app.MapControllers();
 
 Console.WriteLine("Starting application...");
