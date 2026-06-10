@@ -9,7 +9,7 @@ using WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var secretPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "secret.json"));
-builder.Configuration.AddJsonFile(secretPath, optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile(secretPath, optional: true, reloadOnChange: true);
 Secret.Initialize(builder.Configuration);
 
 static void CheckDatabaseConnection(IServiceProvider serviceProvider)
