@@ -262,15 +262,16 @@ export default function Home() {
 
                   {/* FORM INPUT EMAIL BARU */}
                   <div className="grid grid-cols-7 items-center gap-4">
-                    <Label htmlFor="email" className="col-span-2 text-right text-[#2C3E50] text-xs">
-                      Email (Ops)
+                    <Label htmlFor="email" className="col-span-2 text-right text-[#2C3E50]">
+                      Email
                     </Label>
                     <Input
                       id="email"
                       name="email"
                       className="col-span-5"
                       type="email"
-                      placeholder="opsional..."
+                      required
+                      placeholder="Masukkan email..."
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);

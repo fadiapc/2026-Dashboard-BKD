@@ -475,7 +475,7 @@ public class UserRequest
     public required string initials { get; set; }
     public required bool is_admin { get; set; }
     public required string password { get; set; }
-    public string? email { get; set; }
+    public required string email { get; set; }
 }
 
 public class UserUpdateRequest
