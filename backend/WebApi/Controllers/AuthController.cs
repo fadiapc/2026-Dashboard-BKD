@@ -148,7 +148,7 @@ namespace WebApi.Controllers
             var resetToken = new JwtSecurityTokenHandler().WriteToken(token);
             
             // Dummy Frontend URL, change as needed
-            var resetLink = $"http://localhost:3000/reset-password?token={resetToken}";
+            var resetLink = $"https://dashboard-bkd.vercel.app/reset-password?token={resetToken}";
             
             await _emailService.SendPasswordResetEmailAsync(user.Email!, resetLink);
 
