@@ -27,8 +27,9 @@ namespace WebApi.Models
         [Required]
         public bool IsActive { get; set; } = true;
 
+        [Required]
         [StringLength(100)]
-        public string? Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         public List<Schedule> Schedules { get; set; } = new List<Schedule>();
     }

@@ -21,7 +21,7 @@ namespace WebApi.Data
                     InitialChar = Secret.AdminInitials,
                     IsAdmin = true,
                     Password = BCrypt.Net.BCrypt.HashPassword(Secret.AdminPassword),
-                    Email = "",
+                    Email = "admin@dashboard.com",
                     IsActive = true
                 };
                 context.Users.Add(user);
