@@ -31,8 +31,8 @@ namespace WebApi.Data
             if (!await context.Semesters.AnyAsync())
             {
                 context.Semesters.AddRange(
-                    new Semester { Name = "Ganjil 2026/2027", Date = new DateTime(2026, 8, 1), EndDate = new DateTime(2027, 1, 31), IsActive = true },
-                    new Semester { Name = "Genap 2026/2027", Date = new DateTime(2027, 2, 1), EndDate = new DateTime(2027, 7, 31), IsActive = false }
+                    new Semester { Name = "2026/2027 Semester Ganjil", Date = new DateTime(2026, 8, 1), EndDate = new DateTime(2027, 1, 31), IsActive = true },
+                    new Semester { Name = "2026/2027 Semester Genap", Date = new DateTime(2027, 2, 1), EndDate = new DateTime(2027, 7, 31), IsActive = false }
                 );
                 await context.SaveChangesAsync();
             }
